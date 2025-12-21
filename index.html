@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGEN PC - Mihomo Ultimate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-glow: 59, 130, 246;
+            --bg-color: #0b0f1a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --card-bg: rgba(23, 32, 51, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(10, 15, 26, 0.8);
+            --option-bg: rgba(30, 41, 59, 0.4);
+            --terminal-bg: #0d1117;
+            --input-text-color: #f8fafc;
+        }
+
+        body.light-mode {
+            --bg-color: #f0f4f8;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --input-bg: #ffffff;
+            --option-bg: #f1f5f9;
+            --terminal-bg: #f8fafc;
+            --input-text-color: #1e293b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.12) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .glass-card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(16px); 
+            border: 1px solid var(--card-border); 
+            border-radius: 1.25rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .glass-option { 
+            background: var(--option-bg); 
+            border: 1px solid var(--card-border); 
+            border-radius: 0.85rem; 
+            transition: all 0.2s ease; 
+        }
+
+        .disabled-option { opacity: 0.4 !important; pointer-events: none !important; filter: grayscale(0.5); }
+
+        .modern-input {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            color: var(--input-text-color);
+            font-family: 'JetBrains Mono', monospace;
+            transition: 0.3s;
+        }
+        .modern-input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        .modern-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+
+        #output-config {
+            color: var(--input-text-color) !important;
+        }
+
+        .theme-toggle-btn {
+            position: fixed; top: 1.5rem; right: 1.5rem; width: 3.2rem; height: 3.2rem; border-radius: 50%;
+            background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main);
+            display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .toggle-checkbox { display: none; }
+        .toggle-switch {
+            width: 42px; height: 22px; background: #475569; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s;
+        }
+        body.light-mode .toggle-switch { background: #cbd5e1; }
+        .toggle-checkbox:checked + .toggle-switch { background: #3b82f6 !important; }
+        .toggle-checkbox:checked + .toggle-switch::after { transform: translateX(20px); }
+
+        .mode-card { cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
+        .mode-card.active { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.1); }
+        
+        .segmented-control { display: flex; background: rgba(0,0,0,0.1); border: 1px solid var(--card-border); border-radius: 0.6rem; padding: 4px; gap: 4px; }
+        .segment-btn { flex: 1; text-align: center; padding: 7px; font-size: 0.7rem; border-radius: 0.45rem; cursor: pointer; color: var(--text-muted); transition: 0.2s; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .segment-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4); }
+
+        .mac-dots { display: flex; gap: 6px; }
+        .mac-dot { width: 11px; height: 11px; border-radius: 50%; }
+        .mac-red { background-color: #ef4444; }
+        .mac-yellow { background-color: #ffbd2e; }
+        .mac-green { background-color: #22c55e; }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+        .btn-generate:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4); }
+        
+        .btn-success {
+            background: #10b981 !important;
+            border-color: #10b981 !important;
+            color: white !important;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        .btn-copy {
+            background: rgba(100, 116, 139, 0.1);
+            color: var(--text-main);
+            border: 1px solid var(--card-border);
+            transition: all 0.3s;
+        }
+        .btn-copy:hover:not(:disabled) { background: rgba(100, 116, 139, 0.2); }
+
+        .proxy-info-banner {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px dashed rgba(59, 130, 246, 0.3);
+            border-radius: 0.75rem;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; opacity: 0.5; }
+    </style>
+</head>
+<body class="min-h-screen py-10 px-4 flex justify-center items-start">
+
+    <button id="theme-toggle" class="theme-toggle-btn"><i class="fas fa-moon text-xl"></i></button>
+
+    <div class="w-full max-w-6xl space-y-8">
+        <!-- Header -->
+        <div class="text-center space-y-3">
+            <div class="inline-flex items-center justify-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 mb-2">
+                <i class="fa-solid fa-bolt-lightning text-blue-400 text-3xl"></i>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-500 tracking-tight">
+                Mihomo CGEN PC
+            </h1>
+            <p class="text-xs text-gray-500 tracking-[0.2em] uppercase font-bold">
+                Ultimate Clash Meta Generator <span class="text-blue-500 ml-1">V22.2 FINAL</span>
+            </p>
+        </div>
+
+        <div id="status-container" class="hidden mx-auto max-w-2xl glass-card rounded-xl p-4 text-center font-semibold transition-all duration-300"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Columna Izquierda -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Sección Input -->
+                <div class="glass-card p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <label class="font-bold text-sm flex items-center gap-2 text-gray-400">
+                            <i class="fa-solid fa-link text-blue-500"></i> ENLACE DE CONFIGURACIÓN
+                        </label>
+                        <span class="text-[10px] font-black text-blue-500/80 uppercase tracking-widest bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">VLESS • VMESS • TROJAN</span>
+                    </div>
+                    <textarea id="proxy-links" class="modern-input w-full h-36 rounded-xl p-4 text-sm placeholder-gray-600 focus:outline-none" placeholder="Pega tu enlace vless / vmess / trojan aquí..."></textarea>
+                </div>
+
+                <!-- Sección Motor de Sistema -->
+                <div class="glass-card p-6">
+                    <h3 class="font-bold text-sm mb-5 flex items-center gap-2 text-gray-400"><i class="fa-solid fa-microchip text-indigo-500"></i> MOTOR DE SISTEMA</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase mb-3 block">Modo de Funcionamiento</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div id="tun-btn" class="mode-card glass-option p-3 text-center active rounded-xl" onclick="selectMode('tun')">
+                                    <i class="fa-solid fa-shield-halved mb-1 block opacity-50 text-gray-400"></i>
+                                    <div class="font-bold text-[11px] text-gray-500">TUN MODE</div>
+                                </div>
+                                <div id="proxy-btn" class="mode-card glass-option p-3 text-center rounded-xl" onclick="selectMode('proxy')">
+                                    <i class="fa-solid fa-globe mb-1 block opacity-50 text-gray-400"></i>
+                                    <div class="font-bold text-[11px] text-gray-500">PROXY MODE</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="stack-option-group" class="glass-option p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <span class="text-xs font-bold block text-gray-400">TUN STACK</span>
+                                    <span id="stack-status-text" class="text-[10px] text-gray-500 font-medium">gVisor (Default)</span>
+                                </div>
+                                <label><input type="checkbox" id="stack-toggle" class="toggle-checkbox"><div class="toggle-switch"></div></label>
+                            </div>
+                            <div id="stack-details" class="hidden mt-2">
+                                <select id="stack-select" class="modern-input w-full rounded-lg p-2 text-xs">
+                                    <option value="system">System (Rápido)</option>
+                                    <option value="mixed">Mixed</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="proxy-settings-info" class="hidden mt-5 p-4 proxy-info-banner">
+                        <div class="flex items-start gap-3">
+                            <i class="fa-solid fa-circle-info text-blue-400 mt-1"></i>
+                            <div>
+                                <p class="text-[11px] font-bold text-blue-400 uppercase tracking-wide mb-1">Configuración del Sistema:</p>
+                                <p class="text-xs text-gray-500 leading-relaxed">
+                                    En los ajustes de red/proxy de tu PC, usa estos datos:<br>
+                                    <span class="text-blue-500 font-mono bg-blue-500/10 px-1 rounded select-all font-bold">127.0.0.1</span> : 
+                                    <span class="text-blue-500 font-mono bg-blue-500/10 px-1 rounded select-all font-bold">7890</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Ajustes Avanzados -->
+                <div class="glass-card p-6">
+                    <h3 class="font-bold text-sm mb-6 flex items-center gap-2 text-gray-400"><i class="fa-solid fa-sliders text-purple-500"></i> AJUSTES AVANZADOS</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Domestic DNS -->
+                        <div class="glass-option p-5 md:col-span-2 border-l-4 border-l-blue-500">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="font-bold text-xs flex items-center gap-2 text-gray-400"><i class="fa-solid fa-house-signal text-blue-400"></i> DOMESTIC DNS</div>
+                                <div class="segmented-control w-40">
+                                    <div id="dns-manual-btn" class="segment-btn active" onclick="setDomesticDns('manual')">Manual</div>
+                                    <div id="dns-localhost-btn" class="segment-btn" onclick="setDomesticDns('localhost')">Localhost</div>
+                                </div>
+                            </div>
+                            <div id="dns-manual-container">
+                                <input type="text" id="dns-custom" class="modern-input w-full rounded-xl p-3 text-sm text-center" placeholder="Pega aquí la IP de tu WiFi">
+                                <div class="text-[10px] text-gray-500 mt-2 text-center">Ej: 192.168.1.1 (Gateway)</div>
+                            </div>
+                            <div id="dns-localhost-info" class="hidden bg-blue-500/5 rounded-xl p-3 text-center border border-blue-500/10">
+                                <span class="text-blue-400 font-mono text-sm tracking-wider font-bold">System DNS</span>
+                            </div>
+                        </div>
+
+                        <!-- DNS REMOTE -->
+                        <div id="remote-dns-group" class="glass-option p-4 disabled-option">
+                            <div class="font-bold text-[11px] mb-3 uppercase text-gray-400 flex items-center gap-2">
+                                <i class="fa-solid fa-earth-americas text-indigo-400"></i> DNS Remote
+                            </div>
+                            <div class="segmented-control">
+                                <div id="dns-remote-google" class="segment-btn active" onclick="setRemoteDns('google')">Google</div>
+                                <div id="dns-remote-cf" class="segment-btn" onclick="setRemoteDns('cloudflare')">C-Flare</div>
+                            </div>
+                            <div class="text-[9px] text-gray-500 mt-2 text-center">+ Domestic DNS (Prioridad)</div>
+                        </div>
+
+                        <!-- MTU (TUN) -->
+                        <div id="mtu-group" class="glass-option p-4 disabled-option">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold flex items-center gap-2 text-gray-400"><i class="fa-solid fa-ruler-horizontal text-emerald-400"></i> MTU (TUN)</span>
+                                <label><input type="checkbox" id="mtu-toggle" class="toggle-checkbox" disabled><div class="toggle-switch"></div></label>
+                            </div>
+                            <div id="mtu-default-text" class="text-[10px] text-gray-500 text-right mt-1">Default: 1400</div>
+                            <div id="mtu-details" class="hidden mt-2 flex justify-center">
+                                <input type="number" id="mtu-input" class="modern-input w-20 rounded-lg p-1 text-center text-xs font-bold border-2 border-emerald-500/30" value="1400">
+                            </div>
+                        </div>
+
+                        <!-- Fake IP + Sniffer -->
+                        <div id="fakeip-group" class="glass-option p-4 disabled-option">
+                            <!-- Fake IP Switch -->
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-xs font-bold flex items-center gap-2 text-gray-400"><i class="fa-solid fa-mask text-orange-400"></i> FAKE IP</span>
+                                <label><input type="checkbox" id="fakeip-toggle" class="toggle-checkbox" checked disabled><div class="toggle-switch"></div></label>
+                            </div>
+                            
+                            <!-- Sniffer Switch (Nested/Dependent) -->
+                            <div id="sniffer-container" class="mt-4 pt-3 border-t border-gray-600/30 flex justify-between items-center transition-opacity duration-300">
+                                <div>
+                                    <span class="text-[11px] font-bold flex items-center gap-2 text-gray-400">
+                                        <i class="fa-solid fa-magnifying-glass-chart text-pink-400"></i> SNIFFER
+                                    </span>
+                                    <span class="text-[9px] text-gray-500 block ml-5">Requiere Fake IP</span>
+                                </div>
+                                <label><input type="checkbox" id="sniffer-toggle" class="toggle-checkbox" disabled><div class="toggle-switch scale-90 origin-right"></div></label>
+                            </div>
+                            
+                            <div class="text-[9px] text-gray-500 mt-3 uppercase font-bold text-right">Rango: 198.18.0.0/16</div>
+                        </div>
+
+                        <!-- Insecure TLS -->
+                        <div id="insecure-group" class="glass-option p-4 disabled-option">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold flex items-center gap-2 text-yellow-500"><i class="fa-solid fa-unlock"></i> INSECURE TLS</span>
+                                <label><input type="checkbox" id="insecure-toggle" class="toggle-checkbox" checked disabled><div class="toggle-switch"></div></label>
+                            </div>
+                        </div>
+                        
+                        <!-- XUDP (NEW) -->
+                        <div id="xudp-group" class="glass-option p-4 disabled-option">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="text-xs font-bold flex items-center gap-2 text-gray-400">
+                                        <i class="fa-solid fa-bolt text-yellow-300"></i> XUDP
+                                    </span>
+                                    <span class="text-[9px] text-gray-500 block ml-5">Optimización UDP</span>
+                                </div>
+                                <label><input type="checkbox" id="xudp-toggle" class="toggle-checkbox" disabled><div class="toggle-switch"></div></label>
+                            </div>
+                        </div>
+
+                        <!-- uTLS Fingerprint -->
+                        <div id="fingerprint-group" class="glass-option p-4 disabled-option">
+                            <span class="text-xs font-bold block mb-3 flex items-center gap-2 text-gray-400"><i class="fa-solid fa-fingerprint text-blue-400"></i> UTLS FINGERPRINT</span>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] text-gray-400">Activar</span>
+                                <label><input type="checkbox" id="fingerprint-toggle" class="toggle-checkbox" disabled><div class="toggle-switch scale-75"></div></label>
+                            </div>
+                            <div id="fingerprint-select-wrapper" class="hidden mt-2">
+                                <select id="fingerprint-select" class="modern-input w-full rounded-lg p-2 text-xs font-bold" disabled>
+                                    <option value="chrome">Chrome</option>
+                                    <option value="randomized">Aleatorio</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                <div class="glass-card p-5 sticky top-6 z-10 shadow-2xl space-y-4">
+                    <button id="generate-btn" class="btn-generate w-full py-4 rounded-2xl font-black text-white text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-30" disabled>
+                        <i class="fa-solid fa-bolt"></i> GENERAR CONFIG
+                    </button>
+                    <button id="copy-btn" class="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 transition disabled:opacity-30" disabled>
+                        <i id="copy-icon" class="fa-solid fa-copy"></i> <span id="copy-text">COPIAR YAML</span>
+                    </button>
+                </div>
+                
+                <!-- Terminal -->
+                <div class="glass-card overflow-hidden flex-1 min-h-[550px] flex flex-col border border-blue-500/20" style="background-color: var(--terminal-bg);">
+                    <div class="bg-black/40 px-4 py-3 flex justify-between items-center border-b border-white/5">
+                        <div class="flex items-center gap-3">
+                            <div class="mac-dots"><div class="mac-dot mac-red"></div><div class="mac-dot mac-yellow"></div><div class="mac-dot mac-green"></div></div>
+                            <span class="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">config.yaml</span>
+                        </div>
+                        <i class="fa-solid fa-code text-blue-500/50 text-xs"></i>
+                    </div>
+                    <!-- FIX: COLOR DE TEXTO DINÁMICO -->
+                    <pre class="p-5 flex-1 overflow-auto text-[13px] font-mono whitespace-pre scrollbar-thin" id="output-config"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const themeToggle = document.getElementById('theme-toggle');
+        const generateBtn = document.getElementById('generate-btn');
+        const copyBtn = document.getElementById('copy-btn');
+        const proxyLinksInput = document.getElementById('proxy-links');
+        const outputConfig = document.getElementById('output-config');
+        const statusContainer = document.getElementById('status-container');
+        
+        let selectedMode = 'tun';
+        let domesticDnsMode = 'manual';
+        let selectedRemoteDns = 'google';
+
+        const stackOptionGroup = document.getElementById('stack-option-group');
+        const stackToggle = document.getElementById('stack-toggle');
+        const stackDetails = document.getElementById('stack-details');
+        const stackSelect = document.getElementById('stack-select');
+        const stackStatusText = document.getElementById('stack-status-text');
+
+        const mtuGroup = document.getElementById('mtu-group');
+        const mtuToggle = document.getElementById('mtu-toggle');
+        const mtuDetails = document.getElementById('mtu-details');
+        const mtuInput = document.getElementById('mtu-input');
+        const mtuStatusText = document.getElementById('mtu-default-text');
+
+        const fakeIpToggle = document.getElementById('fakeip-toggle');
+        const snifferToggle = document.getElementById('sniffer-toggle');
+        const snifferContainer = document.getElementById('sniffer-container');
+        
+        const insecureToggle = document.getElementById('insecure-toggle');
+        const xudpToggle = document.getElementById('xudp-toggle');
+        const xudpGroup = document.getElementById('xudp-group');
+        
+        const fingerprintGroup = document.getElementById('fingerprint-group');
+        const fingerprintToggle = document.getElementById('fingerprint-toggle');
+        const fingerprintSelectWrapper = document.getElementById('fingerprint-select-wrapper');
+        const fingerprintSelect = document.getElementById('fingerprint-select');
+        
+        const proxySettingsInfo = document.getElementById('proxy-settings-info');
+
+        // Domestic DNS Elements
+        const dnsManualBtn = document.getElementById('dns-manual-btn');
+        const dnsLocalhostBtn = document.getElementById('dns-localhost-btn');
+        const domesticDnsManualContainer = document.getElementById('dns-manual-container');
+        const domesticDnsLocalhostInfo = document.getElementById('dns-localhost-info');
+
+        // UI Logic
+        window.selectMode = (mode) => {
+            selectedMode = mode;
+            const isTun = mode === 'tun';
+            const hasLink = proxyLinksInput.value.trim().length > 0;
+
+            document.getElementById('tun-btn').classList.toggle('active', isTun);
+            document.getElementById('proxy-btn').classList.toggle('active', !isTun);
+            
+            // Info de IP
+            proxySettingsInfo.classList.toggle('hidden', isTun);
+
+            // Bloquear STACK si es Proxy
+            if (!isTun) {
+                stackOptionGroup.classList.add('disabled-option');
+                stackToggle.disabled = true;
+                stackSelect.disabled = true;
+            } else {
+                if (hasLink) {
+                    stackOptionGroup.classList.remove('disabled-option');
+                    stackToggle.disabled = false;
+                    stackSelect.disabled = false;
+                }
+            }
+            
+            // Bloquear MTU si es Proxy
+            if (!isTun) {
+                mtuGroup.classList.add('disabled-option');
+                mtuToggle.disabled = true;
+                mtuInput.disabled = true;
+            } else if (hasLink) {
+                mtuGroup.classList.remove('disabled-option');
+                mtuToggle.disabled = false;
+                mtuInput.disabled = false;
+            }
+        };
+
+        window.setDomesticDns = (mode) => {
+            domesticDnsMode = mode;
+            ['dns-manual-btn', 'dns-localhost-btn'].forEach(id => document.getElementById(id).classList.remove('active'));
+            
+            if(mode === 'manual') { 
+                document.getElementById('dns-manual-btn').classList.add('active');
+                domesticDnsManualContainer.classList.remove('hidden'); 
+                domesticDnsLocalhostInfo.classList.add('hidden'); 
+            } else { 
+                document.getElementById('dns-localhost-btn').classList.add('active');
+                domesticDnsManualContainer.classList.add('hidden'); 
+                domesticDnsLocalhostInfo.classList.remove('hidden'); 
+            }
+        };
+
+        window.setRemoteDns = (provider) => {
+            selectedRemoteDns = provider;
+            document.getElementById('dns-remote-google').classList.toggle('active', provider === 'google');
+            document.getElementById('dns-remote-cf').classList.toggle('active', provider === 'cloudflare');
+        };
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('light-mode');
+            localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+        });
+
+        // Stack Logic
+        stackToggle.addEventListener('change', () => {
+            if (stackToggle.checked) {
+                stackDetails.classList.remove('hidden');
+                stackStatusText.textContent = "Personalizado";
+            } else {
+                stackDetails.classList.add('hidden');
+                stackStatusText.textContent = "gVisor (Default)";
+            }
+        });
+
+        mtuToggle.addEventListener('change', () => {
+            mtuDetails.classList.toggle('hidden', !mtuToggle.checked);
+            mtuStatusText.classList.toggle('hidden', mtuToggle.checked);
+        });
+        
+        // Fake IP & Sniffer Logic
+        fakeIpToggle.addEventListener('change', () => {
+            if (fakeIpToggle.checked) {
+                // Habilitar Sniffer visualmente
+                snifferContainer.classList.remove('opacity-50', 'pointer-events-none');
+                snifferToggle.disabled = false;
+            } else {
+                // Deshabilitar Sniffer
+                snifferContainer.classList.add('opacity-50', 'pointer-events-none');
+                snifferToggle.checked = false;
+                snifferToggle.disabled = true;
+            }
+        });
+
+        fingerprintToggle.addEventListener('change', () => {
+            fingerprintSelectWrapper.classList.toggle('hidden', !fingerprintToggle.checked);
+        });
+
+        // Validación y Estado
+        proxyLinksInput.addEventListener('input', () => {
+            const hasLink = proxyLinksInput.value.trim().length > 0;
+            generateBtn.disabled = !hasLink;
+            copyBtn.disabled = !hasLink;
+            
+            const ids = ['fakeip-group', 'insecure-group', 'fingerprint-group', 'mtu-group', 'remote-dns-group', 'xudp-group'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                el.classList.toggle('disabled-option', !hasLink);
+                el.querySelectorAll('input, select').forEach(i => {
+                    // Excepción para Sniffer: depende de FakeIP
+                    if(i.id === 'sniffer-toggle') {
+                        i.disabled = !hasLink || !fakeIpToggle.checked;
+                    } else {
+                        i.disabled = !hasLink;
+                    }
+                });
+            });
+            
+            const stackGroup = document.getElementById('stack-option-group');
+            if(hasLink && selectedMode === 'tun') {
+                 stackGroup.classList.remove('disabled-option');
+                 stackToggle.disabled = false;
+            } else {
+                 stackGroup.classList.add('disabled-option');
+                 stackToggle.disabled = true;
+            }
+
+            if(hasLink) {
+                statusContainer.classList.remove('hidden');
+                statusContainer.textContent = "✓ ENLACE DETECTADO";
+                statusContainer.className = "mx-auto max-w-2xl glass-card rounded-xl p-3 text-center font-bold text-xs text-blue-400 bg-blue-500/5 border border-blue-500/20";
+            } else { statusContainer.classList.add('hidden'); }
+        });
+
+        function parseLink(link) {
+            try {
+                if (link.startsWith('vless://')) {
+                    const url = new URL(link);
+                    const params = new URLSearchParams(url.search);
+                    return {
+                        type: 'vless', server: url.hostname, port: parseInt(url.port),
+                        uuid: url.username, network: params.get('type') || 'tcp',
+                        tls: params.get('security') === 'tls' || params.get('security') === 'reality',
+                        sni: params.get('sni') || url.hostname,
+                        serviceName: params.get('serviceName') || 'gun',
+                        path: params.get('path') || '/',
+                        reality: params.get('security') === 'reality',
+                        pbk: params.get('pbk') || '', sid: params.get('sid') || ''
+                    };
+                }
+            } catch(e) { return null; }
+        }
+
+        // GENERATOR
+        generateBtn.addEventListener('click', () => {
+            const link = proxyLinksInput.value.trim();
+            const p = parseLink(link);
+            if (!p) return;
+
+            // Domestic DNS Logic
+            let domesticIp = '';
+            if (domesticDnsMode === 'manual') {
+                domesticIp = document.getElementById('dns-custom').value || '192.168.1.1';
+            } else {
+                domesticIp = 'system';
+            }
+
+            // Remote DNS Logic (Strict Clean List)
+            let remoteIps = [];
+            if (selectedRemoteDns === 'google') {
+                remoteIps = ['8.8.8.8', '8.8.4.4'];
+            } else {
+                remoteIps = ['1.1.1.1', '1.0.0.1'];
+            }
+
+            const stack = stackToggle.checked ? stackSelect.value : 'gvisor';
+            const mtu = mtuToggle.checked ? parseInt(mtuInput.value) : 1400;
+
+            // Construcción del YAML Clean & Compact
+            let yaml = `mode: rule
+ipv6: false
+log-level: error
+allow-lan: true
+mixed-port: 7890
+bind-address: "*"`;
+
+            // INYECCIÓN DE SNIFFER (Solo si está activo)
+            if (fakeIpToggle.checked && snifferToggle.checked) {
+                yaml += `
+
+sniffer:
+  enable: true
+  parse-pure-ip: true
+  sniff:
+    tls:
+      ports: [443]
+    http:
+      ports: [80]`;
+            }
+
+            // LÓGICA DE TUN
+            if (selectedMode === 'tun') {
+                yaml += `
+
+tun:
+  enable: true
+  stack: ${stack}
+  mtu: ${mtu}
+  dns-hijack:
+    - any:53
+  auto-route: true
+  auto-detect-interface: true`;
+            }
+
+            yaml += `
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: ${fakeIpToggle.checked ? 'fake-ip' : 'redir-host'}
+`;
+
+            if(fakeIpToggle.checked) {
+                yaml += `  fake-ip-range: 198.18.0.1/16\n`;
+            }
+
+            yaml += `  default-nameserver:
+    - ${domesticIp}
+  nameserver:
+    - ${domesticIp}`;
+
+            remoteIps.forEach(ip => {
+                if(ip !== domesticIp) yaml += `\n    - ${ip}`;
+            });
+
+            yaml += `
+
+proxies:
+  - name: "Proxy-Mihomo"
+    type: ${p.type}
+    server: ${p.server}
+    port: ${p.port}
+    uuid: ${p.uuid}
+    network: ${p.network}
+    tls: ${p.tls}
+    udp: true
+    servername: ${p.sni}
+    skip-cert-verify: ${insecureToggle.checked}`;
+
+            if (p.tls && fingerprintToggle.checked) yaml += `\n    client-fingerprint: ${fingerprintSelect.value}`;
+            
+            // INYECCIÓN XUDP (Solo si está activo)
+            if (xudpToggle.checked) yaml += `\n    packet-encoding: xudp`;
+            
+            if (p.network === 'grpc') yaml += `\n    grpc-opts:\n      grpc-service-name: "${p.serviceName}"`;
+            else if (p.network === 'ws') yaml += `\n    ws-opts:\n      path: "${p.path}"\n      headers:\n        Host: "${p.sni}"`;
+            if (p.reality) yaml += `\n    reality-opts:\n      public-key: ${p.pbk}\n      short-id: ${p.sid}`;
+
+            yaml += `
+
+proxy-groups:
+  - name: "Internet"
+    type: select
+    proxies:
+      - "Proxy-Mihomo"
+
+rules:
+  - MATCH,Internet`;
+
+            outputConfig.textContent = yaml;
+            
+            generateBtn.innerHTML = '<i class="fa-solid fa-check"></i> CONFIG GENERADA';
+            generateBtn.classList.add('btn-success');
+            setTimeout(() => {
+                 generateBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> GENERAR CONFIG';
+                 generateBtn.classList.remove('btn-success');
+            }, 2500);
+        });
+
+        // COPY LOGIC
+        copyBtn.addEventListener('click', () => {
+            const text = outputConfig.textContent;
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            const copyTextSpan = copyBtn.querySelector('span') || copyBtn;
+            const copyIcon = copyBtn.querySelector('i');
+            copyTextSpan.textContent = "¡COPIADO!";
+            copyIcon.className = "fa-solid fa-check";
+            copyBtn.classList.add('btn-success');
+            copyBtn.classList.remove('bg-blue-500/20');
+            setTimeout(() => {
+                copyTextSpan.textContent = "COPIAR YAML";
+                copyIcon.className = "fa-solid fa-copy";
+                copyBtn.classList.remove('btn-success');
+                copyBtn.classList.add('bg-blue-500/20');
+            }, 2000);
+        });
+    });
+    </script>
+</body>
+</html>
