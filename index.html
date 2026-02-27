@@ -511,22 +511,35 @@
 
         // Validación y Estado
         proxyLinksInput.addEventListener('input', () => {
-            const hasLink = proxyLinksInput.value.trim().length > 0;
+            const link = proxyLinksInput.value.trim();
+            const hasLink = link.length > 0;
+            const p = parseLink(link);
+            const isTls = p ? p.tls : false;
+            
             generateBtn.disabled = !hasLink;
             copyBtn.disabled = !hasLink;
             
             const ids = ['fakeip-group', 'insecure-group', 'fingerprint-group', 'mtu-group', 'remote-dns-group', 'xudp-group'];
             ids.forEach(id => {
                 const el = document.getElementById(id);
-                el.classList.toggle('disabled-option', !hasLink);
-                el.querySelectorAll('input, select').forEach(i => {
-                    // Excepción para Sniffer: depende de FakeIP
-                    if(i.id === 'sniffer-toggle') {
-                        i.disabled = !hasLink || !fakeIpToggle.checked;
-                    } else {
-                        i.disabled = !hasLink;
-                    }
-                });
+                
+                if (id === 'insecure-group' || id === 'fingerprint-group') {
+                    const enableTls = hasLink && isTls;
+                    el.classList.toggle('disabled-option', !enableTls);
+                    el.querySelectorAll('input, select').forEach(i => {
+                        i.disabled = !enableTls;
+                    });
+                } else {
+                    el.classList.toggle('disabled-option', !hasLink);
+                    el.querySelectorAll('input, select').forEach(i => {
+                        // Excepción para Sniffer: depende de FakeIP
+                        if(i.id === 'sniffer-toggle') {
+                            i.disabled = !hasLink || !fakeIpToggle.checked;
+                        } else {
+                            i.disabled = !hasLink;
+                        }
+                    });
+                }
             });
             
             const stackGroup = document.getElementById('stack-option-group');
@@ -547,18 +560,34 @@
 
         function parseLink(link) {
             try {
-                if (link.startsWith('vless://')) {
+                if (link.startsWith('vless://') || link.startsWith('trojan://')) {
                     const url = new URL(link);
                     const params = new URLSearchParams(url.search);
                     return {
-                        type: 'vless', server: url.hostname, port: parseInt(url.port),
+                        type: link.startsWith('vless://') ? 'vless' : 'trojan', 
+                        server: url.hostname, port: parseInt(url.port),
                         uuid: url.username, network: params.get('type') || 'tcp',
                         tls: params.get('security') === 'tls' || params.get('security') === 'reality',
-                        sni: params.get('sni') || url.hostname,
+                        sni: params.get('sni') || params.get('host') || url.hostname,
+                        host: params.get('host') || params.get('sni') || url.hostname,
                         serviceName: params.get('serviceName') || 'gun',
                         path: params.get('path') || '/',
                         reality: params.get('security') === 'reality',
                         pbk: params.get('pbk') || '', sid: params.get('sid') || ''
+                    };
+                } else if (link.startsWith('vmess://')) {
+                    const b64 = link.substring(8);
+                    const jsonStr = decodeURIComponent(escape(atob(b64)));
+                    const v = JSON.parse(jsonStr);
+                    return {
+                        type: 'vmess', server: v.add, port: parseInt(v.port),
+                        uuid: v.id, network: v.net || 'tcp',
+                        tls: v.tls === 'tls' || v.tls === true,
+                        sni: v.sni || v.host || v.add,
+                        host: v.host || v.sni || v.add,
+                        serviceName: v.alpn || v.sni || '',
+                        path: v.path || '/',
+                        reality: false, pbk: '', sid: ''
                     };
                 }
             } catch(e) { return null; }
@@ -654,20 +683,23 @@ proxies:
     type: ${p.type}
     server: ${p.server}
     port: ${p.port}
-    uuid: ${p.uuid}
+    ${p.type === 'trojan' ? 'password' : 'uuid'}: ${p.uuid}
     network: ${p.network}
     tls: ${p.tls}
-    udp: true
-    servername: ${p.sni}
-    skip-cert-verify: ${insecureToggle.checked}`;
+    udp: true`;
 
-            if (p.tls && fingerprintToggle.checked) yaml += `\n    client-fingerprint: ${fingerprintSelect.value}`;
+            // SOLO inyectar configuraciones TLS si el enlace realmente usa TLS
+            if (p.tls) {
+                yaml += `\n    servername: ${p.sni}`;
+                yaml += `\n    skip-cert-verify: ${insecureToggle.checked}`;
+                if (fingerprintToggle.checked) yaml += `\n    client-fingerprint: ${fingerprintSelect.value}`;
+            }
             
             // INYECCIÓN XUDP (Solo si está activo)
             if (xudpToggle.checked) yaml += `\n    packet-encoding: xudp`;
             
             if (p.network === 'grpc') yaml += `\n    grpc-opts:\n      grpc-service-name: "${p.serviceName}"`;
-            else if (p.network === 'ws') yaml += `\n    ws-opts:\n      path: "${p.path}"\n      headers:\n        Host: "${p.sni}"`;
+            else if (p.network === 'ws') yaml += `\n    ws-opts:\n      path: "${p.path}"\n      headers:\n        Host: "${p.host}"`;
             if (p.reality) yaml += `\n    reality-opts:\n      public-key: ${p.pbk}\n      short-id: ${p.sid}`;
 
             yaml += `
